@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Usuarios — Helados Cali{% endblock %}
+{% block content %}
+<h1 class="page-title" style="font-size:1.5rem;margin-bottom:0.35rem;">Usuarios</h1>
+<p class="page-lead" style="margin-top:0;margin-bottom:1.25rem;">
+	{{ total_usuarios }} en la base · página {{ page }} de {{ total_pages }}
+</p>
+
+<div class="toolbar-filtros card" style="margin-bottom:1rem;padding:0.85rem 1rem;">
+	<form method="get" action="{{ url_for('usuarios') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;margin:0;">
+		<label>Página<br>
+			<input type="number" name="page" min="1" max="{{ total_pages }}" value="{{ page }}" style="width:5rem;">
+		</label>
+		<label>Filas por página<br>
+			<select name="per_page">
+				{% for n in [10, 25, 50, 100] %}
+					<option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+				{% endfor %}
+			</select>
+		</label>
+		<button type="submit">Ir</button>
+		<a class="btn secondary" href="{{ url_for('usuarios', page=1, per_page=per_page) }}">Primera</a>
+		{% if page < total_pages %}
+		<a class="btn secondary" href="{{ url_for('usuarios', page=page+1, per_page=per_page) }}">Siguiente →</a>
+		{% endif %}
+		{% if page > 1 %}
+		<a class="btn secondary" href="{{ url_for('usuarios', page=page-1, per_page=per_page) }}">← Anterior</a>
+		{% endif %}
+	</form>
+</div>
+
+<div class="panel-wrap">
+	<div style="overflow-x:auto;">
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Nombre</th>
+					<th>Cédula</th>
+					<th>Teléfono</th>
+					<th>Telegram ID</th>
+					<th>Username TG</th>
+					<th>Registro</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for u in usuarios %}
+				<tr>
+					<td><strong>{{ u.id }}</strong></td>
+					<td>{{ (((u.nombre or '') ~ ' ' ~ (u.apellido or ''))|trim) or '—' }}</td>
+					<td><span style="font-variant-numeric:tabular-nums;">{{ u.cedula or '—' }}</span></td>
+					<td><span style="font-variant-numeric:tabular-nums;">{{ u.telefono or '—' }}</span></td>
+					<td><code style="font-size:0.85rem;background:#eceff1;padding:0.15rem 0.4rem;border-radius:6px;">{{ u.telegram_id }}</code></td>
+					<td>
+						{% if u.username_telegram %}
+							{% set un = u.username_telegram|string %}
+							<span style="color:#1565c0;font-weight:600;">{% if un.startswith('@') %}{{ un }}{% else %}@{{ un }}{% endif %}</span>
+						{% else %}
+							<span style="color:#90a4ae;">—</span>
+						{% endif %}
+					</td>
+					<td><span style="color:#455a64;font-size:0.88rem;">{{ u.fecha_registro or '—' }}</span></td>
+				</tr>
+				{% else %}
+				<tr><td colspan="7" style="text-align:center;color:#78909c;padding:2rem;">No hay usuarios.</td></tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endblock %}

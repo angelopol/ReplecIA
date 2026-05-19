@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Pedido #{{ pedido.id }} — Helados Cali{% endblock %}
+{% block content %}
+<p style="margin:0 0 1rem;">
+	<a class="btn-nav" href="{{ url_for('dashboard') }}">Volver al dashboard</a>
+</p>
+
+<h1 class="page-title">Pedido #{{ pedido.id }}</h1>
+<p class="page-lead">
+	Historial completo de mensajes y polaridad detectada para análisis administrativo.
+</p>
+
+<div class="grid grid-3" style="margin-bottom:1.25rem;">
+	<div class="meta-box">
+		<div class="label">Cliente</div>
+		<div class="value">{{ pedido.usuario_nombre or '—' }}</div>
+	</div>
+	<div class="meta-box">
+		<div class="label">Fecha</div>
+		<div class="value" style="font-size:0.95rem;">{{ pedido.fecha_creacion or '—' }}</div>
+	</div>
+	<div class="meta-box">
+		<div class="label">Estado</div>
+		<div class="value"><span class="badge badge-estado">{{ pedido.estado }}</span></div>
+	</div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom:1.25rem;">
+	<div class="card">
+		<h2 style="margin:0 0 0.75rem;font-size:0.95rem;color:#455a64;">Detalle del pedido</h2>
+		<p style="margin:0.35rem 0;"><strong>Telegram ID:</strong> {{ pedido.telegram_id }}</p>
+		<p style="margin:0.35rem 0;"><strong>Cédula / teléfono:</strong> {{ pedido.usuario_cedula or '—' }} / {{ pedido.usuario_telefono or '—' }}</p>
+		<p style="margin:0.35rem 0;"><strong>Producto:</strong> {{ pedido.nombre_producto or '—' }} ×{{ pedido.cantidad }}</p>
+		<p style="margin:0.35rem 0;"><strong>Entrega:</strong> {{ pedido.tipo_entrega }}{% if pedido.ubicacion_entrega %} — {{ pedido.ubicacion_entrega }}{% endif %}</p>
+		<p style="margin:0.35rem 0;"><strong>Delivery USD:</strong> {{ pedido.delivery_costo_usd }} <small>(revisado {{ pedido.delivery_revisado }})</small></p>
+		<p style="margin:0.35rem 0;"><strong>Pago:</strong> {{ pedido.metodo_pago }}</p>
+	</div>
+	<div class="card">
+		<h2 style="margin:0 0 0.75rem;font-size:0.95rem;color:#455a64;">Acciones (misma lógica que Telegram)</h2>
+		{% if pedido.tipo_entrega == 'delivery' and pedido.estado == 'pendiente_admin' %}
+		<form method="post" action="{{ url_for('pedido_accion', pedido_id=pedido.id) }}" style="margin-bottom:0.65rem;">
+			<input type="hidden" name="accion" value="confirmar">
+			<button type="submit">Confirmar entrega (en camino)</button>
+		</form>
+		{% endif %}
+		{% if pedido.tipo_entrega == 'delivery' and pedido.estado == 'en_camino' %}
+		<form method="post" action="{{ url_for('pedido_accion', pedido_id=pedido.id) }}" style="margin-bottom:0.65rem;">
+			<input type="hidden" name="accion" value="entregado">
+			<button type="submit">Marcar entregado</button>
+		</form>
+		{% endif %}
+		{% if pedido.tipo_entrega == 'pickup' and pedido.estado == 'pendiente_pickup' %}
+		<form method="post" action="{{ url_for('pedido_accion', pedido_id=pedido.id) }}">
+			<input type="hidden" name="accion" value="concluir">
+			<button type="submit">Concluir pickup</button>
+		</form>
+		{% endif %}
+		{% if pedido.tipo_entrega == 'delivery' and pedido.estado != 'pendiente_admin' and pedido.estado != 'en_camino' %}
+			<p style="color:#78909c;margin:0;font-size:0.9rem;">No hay acciones para este estado.</p>
+		{% elif pedido.tipo_entrega == 'pickup' and pedido.estado != 'pendiente_pickup' %}
+			<p style="color:#78909c;margin:0;font-size:0.9rem;">No hay acciones para este estado.</p>
+		{% endif %}
+	</div>
+</div>
+
+{% if pedido['items'] and pedido['items']|length > 0 %}
+<div class="card" style="margin-bottom:1.25rem;">
+	<h2 style="margin:0 0 0.65rem;font-size:0.95rem;">Ítems</h2>
+	<table class="data-table" style="box-shadow:none;border:0;">
+		<tr><th>Producto ID</th><th>Cantidad</th><th>Precio unit.</th></tr>
+		{% for it in pedido['items'] %}
+		<tr><td>{{ it.producto_id }}</td><td>{{ it.cantidad }}</td><td>{{ it.precio_unitario }}</td></tr>
+		{% endfor %}
+	</table>
+</div>
+{% endif %}
+
+<div class="panel-wrap" style="padding:1rem 1.15rem 1.25rem;">
+	<h2 style="margin:0 0 1rem;font-size:1.05rem;color:var(--azul);">Historial de conversación</h2>
+	{% if chat %}
+	<div class="msg-list">
+		{% for m in chat %}
+			{% set em = (m.emisor or '')|lower %}
+			{% if em == 'admin' %}
+				<div class="msg msg-admin">
+					<div class="msg-head">
+						<span class="msg-actor">Admin</span>
+						<span class="msg-time">{{ m.fecha_creacion }}</span>
+					</div>
+					<div class="msg-body">{{ m.mensaje }}</div>
+					<span class="pill-polaridad sin">Sin análisis</span>
+				</div>
+			{% else %}
+				<div class="msg msg-cliente">
+					<div class="msg-head">
+						<span class="msg-actor">Cliente</span>
+						<span class="msg-time">{{ m.fecha_creacion }}</span>
+					</div>
+					<div class="msg-body">{{ m.mensaje }}</div>
+					{% if m.polaridad_sentimiento is defined and m.polaridad_sentimiento is not none %}
+						{% if m.polaridad_sentimiento < -0.05 %}
+							<span class="pill-polaridad neg">Polaridad: {{ '%.2f'|format(m.polaridad_sentimiento) }}</span>
+						{% elif m.polaridad_sentimiento > 0.05 %}
+							<span class="pill-polaridad pos">Polaridad: {{ '%.2f'|format(m.polaridad_sentimiento) }}</span>
+						{% else %}
+							<span class="pill-polaridad sin">Polaridad: {{ '%.2f'|format(m.polaridad_sentimiento) }}</span>
+						{% endif %}
+					{% else %}
+						<span class="pill-polaridad sin">Sin análisis</span>
+					{% endif %}
+				</div>
+			{% endif %}
+		{% endfor %}
+	</div>
+	{% else %}
+		<p style="margin:0;color:#78909c;">Sin mensajes en este pedido.</p>
+	{% endif %}
+</div>
+{% endblock %}

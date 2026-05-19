@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{% block title %}Panel — Helados Cali{% endblock %}</title>
+	<style>
+		:root {
+			--azul: #1565c0;
+			--azul-boton: #0d47a1;
+			--azul-osc: #0d47a1;
+			--fondo: #eceff1;
+			--card: #fff;
+			--borde: #e0e6ef;
+			--rosa-alerta: #fce4ec;
+			--verde-ok: #e8f5e9;
+			--verde-texto: #2e7d32;
+			--rojo-alerta: #ffcdd2;
+			--rojo-texto: #c62828;
+		}
+		* { box-sizing: border-box; }
+		body { font-family: "Segoe UI", system-ui, sans-serif; margin: 0; background: var(--fondo); color: #1a1a2e; min-height: 100vh; }
+		header {
+			background: linear-gradient(135deg, var(--azul), var(--azul-osc));
+			color: #fff;
+			padding: 0.75rem 1.25rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			box-shadow: 0 2px 8px rgba(0,0,0,.12);
+		}
+		header .brand { font-weight: 700; letter-spacing: .02em; }
+		header nav a { color: #fff; text-decoration: none; margin-right: 1rem; font-weight: 500; }
+		header nav a:hover { text-decoration: underline; }
+		main { max-width: 960px; margin: 1.25rem auto; padding: 0 1rem 2.5rem; }
+		.flash { padding: 0.65rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
+		.flash.ok { background: var(--verde-ok); border: 1px solid #a5d6a7; }
+		.flash.error { background: #ffebee; border: 1px solid #ef9a9a; }
+		.panel-wrap { background: var(--card); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); border: 1px solid var(--borde); overflow: hidden; }
+		.card { background: var(--card); border: 1px solid var(--borde); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+		table.data-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+		.data-table th, .data-table td { text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+		.data-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .06em; color: #607d8b; background: #fafbfc; }
+		.data-table tr:last-child td { border-bottom: none; }
+		.data-table tr.row-alerta-sentimiento { background: var(--rosa-alerta); }
+		a.btn-nav, button, .btn {
+			display: inline-block;
+			background: var(--azul-boton);
+			color: #fff !important;
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 10px;
+			cursor: pointer;
+			font-size: 0.88rem;
+			font-weight: 600;
+			text-decoration: none;
+			text-align: center;
+			line-height: 1.25;
+			border: 1px solid transparent;
+		}
+		a.btn-nav:hover, .btn:hover, button:hover { filter: brightness(1.08); text-decoration: none; }
+		button.secondary, a.secondary { background: #546e7a; }
+		input, select { padding: 0.45rem 0.65rem; border: 1px solid var(--borde); border-radius: 8px; font-size: 0.95rem; }
+		.badge {
+			display: inline-block;
+			padding: 0.28rem 0.75rem;
+			border-radius: 999px;
+			font-size: 0.78rem;
+			font-weight: 600;
+		}
+		.badge-estado { background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
+		.badge-sin-alerta { background: var(--verde-ok); color: var(--verde-texto); border: 1px solid #a5d6a7; }
+		.badge-negativo { background: var(--rojo-alerta); color: var(--rojo-texto); border: 1px solid #ef9a9a; }
+		.grid { display: grid; gap: 1rem; }
+		@media (min-width: 720px) {
+			.grid-2 { grid-template-columns: 1fr 1fr; }
+			.grid-3 { grid-template-columns: repeat(3, 1fr); }
+		}
+		.page-title { color: var(--azul); font-size: 1.75rem; font-weight: 800; margin: 0 0 0.35rem; }
+		.page-lead { color: #546e7a; margin: 0 0 1.25rem; font-size: 0.95rem; line-height: 1.45; }
+		.meta-box {
+			background: #fff;
+			border: 1px solid var(--borde);
+			border-radius: 12px;
+			padding: 1rem 1.1rem;
+			text-align: center;
+		}
+		.meta-box .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em; color: #78909c; font-weight: 700; margin-bottom: 0.35rem; }
+		.meta-box .value { font-size: 1.05rem; font-weight: 600; color: #263238; }
+		.msg-list { display: flex; flex-direction: column; gap: 1rem; }
+		.msg {
+			background: #fff;
+			border: 1px solid var(--borde);
+			border-radius: 12px;
+			padding: 0.85rem 1rem 1rem;
+			box-shadow: 0 1px 4px rgba(0,0,0,.05);
+		}
+		.msg-cliente { border-left: 5px solid var(--azul); }
+		.msg-admin { border-left: 5px solid #c62828; }
+		.msg-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+		.msg-actor { font-weight: 800; font-size: 0.95rem; }
+		.msg-cliente .msg-actor { color: var(--azul); }
+		.msg-admin .msg-actor { color: #c62828; }
+		.msg-time { font-size: 0.78rem; color: #90a4ae; }
+		.msg-body { color: #37474f; line-height: 1.45; margin-bottom: 0.65rem; word-break: break-word; }
+		.pill-polaridad {
+			display: inline-block;
+			padding: 0.25rem 0.7rem;
+			border-radius: 999px;
+			font-size: 0.78rem;
+			font-weight: 700;
+		}
+		.pill-polaridad.neg { background: #ffcdd2; color: #b71c1c; }
+		.pill-polaridad.sin { background: #eceff1; color: #607d8b; }
+		.pill-polaridad.pos { background: #c8e6c9; color: #1b5e20; }
+		.toolbar-filtros { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem; }
+		.metric-deck {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+			gap: 1rem;
+			margin-bottom: 1.25rem;
+		}
+		.metric-deck--dense { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.85rem; }
+		.metric-card {
+			background: var(--card);
+			border: 1px solid var(--borde);
+			border-radius: 14px;
+			padding: 1rem 1.1rem 1.05rem;
+			box-shadow: 0 2px 12px rgba(0,0,0,.06);
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			min-height: 108px;
+			transition: transform 0.12s ease, box-shadow 0.12s ease;
+		}
+		.metric-card--link {
+			text-decoration: none;
+			color: inherit;
+			cursor: pointer;
+		}
+		.metric-card--link:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 6px 20px rgba(21, 101, 192, 0.15);
+			border-color: #90caf9;
+		}
+		.metric-card--hoy {
+			background: linear-gradient(145deg, #e3f2fd 0%, #fff 55%);
+			border-color: #90caf9;
+		}
+		.metric-card--total {
+			background: linear-gradient(145deg, #f3e5f5 0%, #fff 55%);
+			border-color: #e1bee7;
+		}
+		.metric-card--alert {
+			background: linear-gradient(145deg, #fce4ec 0%, #fff 55%);
+			border-color: #f8bbd9;
+		}
+		.metric-card--clientes {
+			background: linear-gradient(145deg, #e0f2f1 0%, #fff 55%);
+			border-color: #80cbc4;
+		}
+		.metric-card--clientes .metric-num { color: #00695c; }
+		.metric-card .metric-label {
+			font-size: 0.72rem;
+			text-transform: uppercase;
+			letter-spacing: 0.07em;
+			font-weight: 700;
+			color: #78909c;
+			margin-bottom: 0.35rem;
+		}
+		.metric-card .metric-num {
+			font-size: 1.85rem;
+			font-weight: 800;
+			line-height: 1.1;
+			color: #0d47a1;
+			letter-spacing: -0.02em;
+		}
+		.metric-card--alert .metric-num { color: #ad1457; }
+		.metric-card--total .metric-num { color: #6a1b9a; }
+		.metric-card .metric-sub {
+			margin-top: 0.4rem;
+			font-size: 0.78rem;
+			color: #90a4ae;
+			line-height: 1.3;
+		}
+		.metric-section-title {
+			font-size: 0.8rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			color: #607d8b;
+			margin: 0 0 0.5rem 0.1rem;
+		}
+	</style>
+	{% block head %}{% endblock %}
+</head>
+<body>
+	<header>
+		<div>
+			<span class="brand">Helados Cali</span>
+			<nav style="display:inline;margin-left:1rem;">
+				<a href="{{ url_for('dashboard') }}">Pedidos</a>
+				<a href="{{ url_for('usuarios') }}">Usuarios</a>
+				<a href="{{ url_for('guia_panel') }}">Guía</a>
+			</nav>
+		</div>
+		{% if current_user.is_authenticated %}
+		<nav><a href="{{ url_for('logout') }}">Salir</a></nav>
+		{% endif %}
+	</header>
+	<main>
+		{% with messages = get_flashed_messages(with_categories=true) %}
+			{% if messages %}
+				{% for cat, msg in messages %}
+					<div class="flash {{ cat }}">{{ msg }}</div>
+				{% endfor %}
+			{% endif %}
+		{% endwith %}
+		{% block content %}{% endblock %}
+	</main>
+</body>
+</html>

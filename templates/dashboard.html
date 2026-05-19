@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Pedidos — Helados Cali{% endblock %}
+{% block content %}
+<h1 class="page-title" style="font-size:1.35rem;">Pedidos</h1>
+
+<p class="metric-section-title">Resumen</p>
+<div class="metric-deck">
+	<div class="metric-card metric-card--hoy">
+		<span class="metric-label">Pedidos hoy</span>
+		<span class="metric-num">{{ hoy_count }}</span>
+		<span class="metric-sub">Zona horaria: {{ zona_caracas }} · base: últimos 2000 pedidos</span>
+	</div>
+	<a class="metric-card metric-card--clientes metric-card--link" href="{{ url_for('usuarios') }}">
+		<span class="metric-label">Clientes nuevos hoy</span>
+		<span class="metric-num">{{ clientes_nuevos_hoy }}</span>
+		<span class="metric-sub">Según fecha de registro en la base (misma zona)</span>
+	</a>
+	<div class="metric-card metric-card--total">
+		<span class="metric-label">Filas en tabla</span>
+		<span class="metric-num">{{ total_pedidos_lista }}</span>
+		<span class="metric-sub">Con los filtros y límite actuales (máx. {{ limite }})</span>
+	</div>
+	<a class="metric-card metric-card--alert metric-card--link" href="{{ url_for('dashboard', solo_alerta=1, limite=limite) }}">
+		<span class="metric-label">Alertas sentimiento</span>
+		<span class="metric-num">{{ num_alertas_sentimiento }}</span>
+		<span class="metric-sub">Pedidos distintos con mensaje cliente &lt; −0.05 (clic: ver solo esos)</span>
+	</a>
+</div>
+
+<p class="metric-section-title">Por estado <span style="font-weight:500;text-transform:none;color:#90a4ae;">(clic para filtrar)</span></p>
+<div class="metric-deck metric-deck--dense">
+	{% for t in tarjetas_estado %}
+	<a class="metric-card metric-card--link" href="{{ url_for('dashboard', estado=t.estado, limite=limite, q=q) }}{% if solo_alerta %}&amp;solo_alerta=1{% endif %}">
+		<span class="metric-label">{{ t.titulo }}</span>
+		<span class="metric-num">{{ t.cantidad }}</span>
+		<span class="metric-sub">Estado: <code style="font-size:0.75rem;background:#eceff1;padding:0.1rem 0.35rem;border-radius:4px;">{{ t.estado }}</code></span>
+	</a>
+	{% else %}
+	<div class="metric-card"><span class="metric-sub">Sin datos de estado.</span></div>
+	{% endfor %}
+</div>
+
+{% if alertas %}
+<div class="card" style="border-color:#ffcdd2;">
+	<strong style="font-size:0.85rem;">Alertas recientes (sentimiento cliente &lt; −0.05)</strong>
+	<ul style="margin:0.5rem 0 0;padding-left:1.2rem;font-size:0.9rem;">
+		{% for a in alertas %}
+			<li><a href="{{ url_for('pedido_detalle', pedido_id=a.pedido_id) }}">Pedido #{{ a.pedido_id }}</a> — {{ a.ultima }}</li>
+		{% endfor %}
+	</ul>
+</div>
+{% endif %}
+
+<div class="toolbar-filtros card" style="margin-bottom:1rem;padding:0.85rem 1rem;">
+	<form method="get" action="{{ url_for('dashboard') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;margin:0;">
+		<label>Estado<br>
+			<select name="estado">
+				<option value="">(todos)</option>
+				{% for e in conteo_estado.keys() %}
+					<option value="{{ e }}" {% if estado_f == e %}selected{% endif %}>{{ e }}</option>
+				{% endfor %}
+			</select>
+		</label>
+		<label>Buscar texto<br>
+			<input name="q" value="{{ q }}" placeholder="cliente, producto… Use #8 para pedido 8">
+		</label>
+		<label>Máx. filas<br>
+			<input type="number" name="limite" min="1" max="500" value="{{ limite }}" style="width:5.5rem;">
+		</label>
+		<label style="display:flex;align-items:center;gap:0.4rem;padding-bottom:0.15rem;">
+			<input type="checkbox" name="solo_alerta" value="1" {% if solo_alerta %}checked{% endif %}>
+			<span>Solo alerta sentimiento</span>
+		</label>
+		<button type="submit">Filtrar</button>
+		<a class="btn secondary" href="{{ url_for('dashboard') }}">Limpiar</a>
+	</form>
+</div>
+
+<div class="panel-wrap">
+	<table class="data-table">
+		<thead>
+			<tr>
+				<th>Pedido</th>
+				<th>Cliente</th>
+				<th>Fecha</th>
+				<th>Estado</th>
+				<th>Alerta</th>
+				<th style="text-align:right;">Acción</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for p in pedidos %}
+			<tr class="{% if p.alerta_sentimiento_negativo %}row-alerta-sentimiento{% endif %}">
+				<td><strong>#{{ p.id }}</strong></td>
+				<td>{{ (p.cliente or '—')|trim }}</td>
+				<td><span style="color:#455a64;font-size:0.9rem;">{{ p.fecha_creacion or '—' }}</span></td>
+				<td><span class="badge badge-estado">{{ p.estado }}</span></td>
+				<td>
+					{% if p.alerta_sentimiento_negativo %}
+						<span class="badge badge-negativo">! Sentimiento negativo</span>
+					{% else %}
+						<span class="badge badge-sin-alerta">Sin alerta</span>
+					{% endif %}
+				</td>
+				<td style="text-align:right;">
+					<a class="btn" href="{{ url_for('pedido_detalle', pedido_id=p.id) }}">Ver detalle</a>
+				</td>
+			</tr>
+			{% else %}
+			<tr><td colspan="6" style="text-align:center;color:#78909c;padding:2rem;">No hay pedidos con este filtro.</td></tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}

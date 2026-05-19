@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Guía del panel — Helados Cali{% endblock %}
+{% block content %}
+<h1 class="page-title">Guía rápida del panel</h1>
+<p class="page-lead">
+	Resumen orientado a operación y documentación (p. ej. capturas para informe). El bot de Telegram y este panel comparten la misma base de datos de pedidos y mensajes.
+</p>
+
+<div class="card">
+	<h2 style="margin-top:0;color:var(--azul);font-size:1.05rem;">Acceso</h2>
+	<ul style="margin:0;padding-left:1.2rem;line-height:1.55;color:#37474f;">
+		<li>Ruta de ingreso: <code>/login</code> (credenciales según variables de entorno o registro inicial en tabla <code>admin</code>).</li>
+		<li>Zona horaria de métricas «hoy»: America/Caracas (Venezuela).</li>
+	</ul>
+</div>
+
+<div class="card">
+	<h2 style="margin-top:0;color:var(--azul);font-size:1.05rem;">Pedidos (tablero principal)</h2>
+	<ul style="margin:0;padding-left:1.2rem;line-height:1.55;color:#37474f;">
+		<li><strong>Resumen:</strong> pedidos del día, clientes nuevos, total de filas visibles con filtros, y conteo de pedidos con alerta de sentimiento negativo (&lt; −0,05).</li>
+		<li><strong>Por estado:</strong> cada tarjeta filtra la tabla por ese estado (entregado, en camino, pendiente, etc.).</li>
+		<li><strong>Filtros:</strong> estado, texto libre (cliente, producto, o <code>#8</code> para pedido 8), máximo de filas, y casilla «solo alerta sentimiento».</li>
+		<li><strong>Detalle:</strong> en cada fila, «Ver detalle» abre el pedido, el historial de chat y acciones (confirmar, en camino, entregado, etc.) según corresponda.</li>
+	</ul>
+</div>
+
+<div class="card">
+	<h2 style="margin-top:0;color:var(--azul);font-size:1.05rem;">Sentimiento y chat</h2>
+	<ul style="margin:0;padding-left:1.2rem;line-height:1.55;color:#37474f;">
+		<li>Los mensajes del cliente en Telegram se registran con polaridad estimada; valores claramente negativos marcan el pedido como alerta en el panel.</li>
+		<li>La detección combina TextBlob y un léxico de reclamos en español; no sustituye la revisión humana.</li>
+	</ul>
+</div>
+
+<div class="card">
+	<h2 style="margin-top:0;color:var(--azul);font-size:1.05rem;">Usuarios</h2>
+	<p style="margin:0;color:#37474f;line-height:1.55;">Listado paginado de clientes registrados vía Telegram (nombre, datos de contacto si se capturaron, fecha de registro).</p>
+</div>
+
+<p style="margin-top:1.25rem;">
+	<a class="btn secondary" href="{{ url_for('dashboard') }}">Volver a pedidos</a>
+</p>
+{% endblock %}

@@ -1,0 +1,8 @@
+python-telegram-bot>=20.0
+Flask
+Flask-Login
+python-dotenv
+textblob
+bcv_exchange
+sentence-transformers
+google-generativeai

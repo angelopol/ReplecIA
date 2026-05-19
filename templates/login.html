@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Ingreso — Panel{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 400px; margin: 2rem auto;">
+	<h1 style="margin-top:0;">Panel administrativo</h1>
+	<p style="color:#546e7a;">Helados Cali — acceso restringido.</p>
+	<form method="post" action="{{ url_for('login') }}">
+		{% if next_url %}
+		<input type="hidden" name="next" value="{{ next_url }}">
+		{% endif %}
+		<p><label>Usuario<br><input name="usuario" required autocomplete="username" style="width:100%;"></label></p>
+		<p><label>Contraseña<br><input type="password" name="contraseña" required autocomplete="current-password" style="width:100%;"></label></p>
+		<p><button type="submit">Entrar</button></p>
+	</form>
+</div>
+{% endblock %}
