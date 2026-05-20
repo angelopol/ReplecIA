@@ -68,6 +68,7 @@ export function scoreProducts(message: string, vehicle: VehicleInfo, products: I
   const make = normalizeSearchText(vehicle.make ?? "");
   const model = normalizeSearchText(vehicle.model ?? "");
   const year = vehicle.year;
+  const hasVehicleIdentity = Boolean(make || model);
 
   return products
     .filter((product) => product.stock > 0)
@@ -102,7 +103,7 @@ export function scoreProducts(message: string, vehicle: VehicleInfo, products: I
           reasons.push("motor compatible");
         }
       } else if (compatibilities.length > 0 && (make || model || year)) {
-        score -= 0.22;
+        score -= 0.5;
       }
 
       if (product.stock > 0) {
@@ -116,7 +117,12 @@ export function scoreProducts(message: string, vehicle: VehicleInfo, products: I
         reasons,
       };
     })
-    .filter((match) => match.confidence > 0.08)
+    .filter((match) => {
+      if (hasVehicleIdentity) {
+        return match.reasons.includes("compatibilidad vehicular registrada") && match.confidence >= 0.35;
+      }
+      return match.confidence > 0.08;
+    })
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 4);
 }

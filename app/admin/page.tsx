@@ -1,4 +1,4 @@
-import { count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, lte, sql } from "drizzle-orm";
 import AdminShell from "@/components/AdminShell";
 import { getCurrentSession } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -15,6 +15,18 @@ export default async function AdminDashboard() {
     .select({ value: count() })
     .from(conversations)
     .where(eq(conversations.businessId, businessId));
+  const [paidOrders] = await db
+    .select({ value: count() })
+    .from(orders)
+    .where(and(eq(orders.businessId, businessId), eq(orders.paymentStatus, "paid")));
+  const [pendingDelivery] = await db
+    .select({ value: count() })
+    .from(orders)
+    .where(and(eq(orders.businessId, businessId), eq(orders.deliveryStatus, "pending_coordination")));
+  const [lowStock] = await db
+    .select({ value: count() })
+    .from(products)
+    .where(and(eq(products.businessId, businessId), lte(products.stock, 3)));
   const [sales] = await db
     .select({ value: sql<string>`coalesce(sum(${orders.totalUsd}), 0)` })
     .from(orders)
@@ -47,6 +59,18 @@ export default async function AdminDashboard() {
         <div className="card metric">
           Conversaciones
           <strong>{conversationCount.value}</strong>
+        </div>
+        <div className="card metric">
+          Pagos completados
+          <strong>{paidOrders.value}</strong>
+        </div>
+        <div className="card metric">
+          Entregas por coordinar
+          <strong>{pendingDelivery.value}</strong>
+        </div>
+        <div className="card metric">
+          Stock crítico
+          <strong>{lowStock.value}</strong>
         </div>
       </section>
 

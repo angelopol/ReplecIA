@@ -8,6 +8,20 @@
       "when": 1779218891602,
       "tag": "0000_daily_apocalypse",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779222374766,
+      "tag": "0001_square_anita_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779223752578,
+      "tag": "0002_orange_robin_chapel",
+      "breakpoints": true
     }
   ]
 }

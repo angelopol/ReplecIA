@@ -1,13 +1,20 @@
 import { revalidatePath } from "next/cache";
 import AdminShell from "@/components/AdminShell";
 import { getCurrentSession } from "@/lib/auth";
-import { createInventoryItem, listInventory } from "@/lib/services/inventory";
+import { createInventoryItem, listInventory, updateInventoryItem } from "@/lib/services/inventory";
 import { moneyUsd } from "@/lib/format";
 
 async function createProductAction(formData: FormData) {
   "use server";
   const session = await getCurrentSession();
   await createInventoryItem(session!.businessId, formData);
+  revalidatePath("/admin/inventory");
+}
+
+async function updateProductAction(formData: FormData) {
+  "use server";
+  const productId = String(formData.get("productId") || "");
+  await updateInventoryItem(productId, formData);
   revalidatePath("/admin/inventory");
 }
 
@@ -89,6 +96,7 @@ export default async function InventoryPage() {
               <th>Compatibilidad</th>
               <th>Stock</th>
               <th>Precio</th>
+              <th>Edición rápida</th>
             </tr>
           </thead>
           <tbody>
@@ -109,6 +117,20 @@ export default async function InventoryPage() {
                   <span className={item.stock > 0 ? "badge ok" : "badge warn"}>{item.stock}</span>
                 </td>
                 <td>{moneyUsd(item.priceUsd)}</td>
+                <td>
+                  <form action={updateProductAction} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <input type="hidden" name="productId" value={item.id} />
+                    <input name="stock" type="number" min="0" defaultValue={item.stock} style={{ width: 82 }} />
+                    <input name="priceUsd" type="number" min="0" step="0.01" defaultValue={item.priceUsd} style={{ width: 100 }} />
+                    <label style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                      <input name="active" type="checkbox" defaultChecked={item.active} />
+                      Activo
+                    </label>
+                    <button className="btn secondary" type="submit">
+                      Guardar
+                    </button>
+                  </form>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -30,6 +30,17 @@ export const conversationStatusEnum = pgEnum("conversation_status", [
   "closed",
 ]);
 
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "failed", "refunded"]);
+export const checkoutStatusEnum = pgEnum("checkout_status", [
+  "collecting_contact",
+  "collecting_delivery",
+  "requires_payment_method",
+  "processing",
+  "succeeded",
+  "failed",
+  "cancelled",
+]);
+
 export const businesses = pgTable("businesses", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 160 }).notNull(),
@@ -117,11 +128,56 @@ export const conversations = pgTable(
     status: conversationStatusEnum("status").notNull().default("open"),
     vehicle: jsonb("vehicle").$type<VehicleInfo>().notNull().default({}),
     diagnosis: jsonb("diagnosis").$type<DiagnosisSnapshot>().notNull().default({}),
+    salesMemory: jsonb("sales_memory").$type<SalesMemory>().notNull().default({}),
+    currentOrderId: uuid("current_order_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     businessIdx: index("conversations_business_idx").on(table.businessId),
+  }),
+);
+
+export const checkoutSessions = pgTable(
+  "checkout_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "restrict" }),
+    quantity: integer("quantity").notNull().default(1),
+    status: checkoutStatusEnum("status").notNull().default("collecting_contact"),
+    customerName: varchar("customer_name", { length: 140 }),
+    customerPhone: varchar("customer_phone", { length: 50 }),
+    deliveryAddress: text("delivery_address"),
+    amountUsd: numeric("amount_usd", { precision: 10, scale: 2 }).notNull().default("0"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    businessIdx: index("checkout_sessions_business_idx").on(table.businessId),
+    conversationIdx: index("checkout_sessions_conversation_idx").on(table.conversationId),
+  }),
+);
+
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    checkoutSessionId: uuid("checkout_session_id").notNull().references(() => checkoutSessions.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    amountUsd: numeric("amount_usd", { precision: 10, scale: 2 }).notNull().default("0"),
+    reference: varchar("reference", { length: 120 }).notNull(),
+    cardLast4: varchar("card_last4", { length: 4 }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    checkoutIdx: index("payments_checkout_idx").on(table.checkoutSessionId),
+    orderIdx: index("payments_order_idx").on(table.orderId),
   }),
 );
 
@@ -149,6 +205,10 @@ export const orders = pgTable(
     customerName: varchar("customer_name", { length: 140 }).notNull(),
     customerPhone: varchar("customer_phone", { length: 50 }).notNull(),
     status: orderStatusEnum("status").notNull().default("quote_requested"),
+    paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending"),
+    paymentReference: varchar("payment_reference", { length: 120 }),
+    deliveryAddress: text("delivery_address"),
+    deliveryStatus: varchar("delivery_status", { length: 80 }).notNull().default("pending_coordination"),
     notes: text("notes").notNull().default(""),
     totalUsd: numeric("total_usd", { precision: 10, scale: 2 }).notNull().default("0"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -182,6 +242,13 @@ export const productRelations = relations(products, ({ many, one }) => ({
   }),
 }));
 
+export const vehicleCompatibilityRelations = relations(vehicleCompatibilities, ({ one }) => ({
+  product: one(products, {
+    fields: [vehicleCompatibilities.productId],
+    references: [products.id],
+  }),
+}));
+
 export const orderRelations = relations(orders, ({ many }) => ({
   items: many(orderItems),
 }));
@@ -199,6 +266,7 @@ export const orderItemRelations = relations(orderItems, ({ one }) => ({
 
 export const conversationRelations = relations(conversations, ({ many }) => ({
   messages: many(messages),
+  checkoutSessions: many(checkoutSessions),
 }));
 
 export const messageRelations = relations(messages, ({ one }) => ({
@@ -210,6 +278,17 @@ export const messageRelations = relations(messages, ({ one }) => ({
 
 export const categoryRelations = relations(categories, ({ many }) => ({
   products: many(products),
+}));
+
+export const checkoutSessionRelations = relations(checkoutSessions, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [checkoutSessions.conversationId],
+    references: [conversations.id],
+  }),
+  product: one(products, {
+    fields: [checkoutSessions.productId],
+    references: [products.id],
+  }),
 }));
 
 export type VehicleInfo = {
@@ -225,4 +304,21 @@ export type DiagnosisSnapshot = {
   confidence?: number;
   recommendation?: string;
   missingFields?: string[];
+};
+
+export type SalesMemory = {
+  stage?: "idle" | "contact" | "delivery" | "payment" | "completed";
+  selectedProductId?: string;
+  selectedProductName?: string;
+  selectedSku?: string;
+  selectedPriceUsd?: string;
+  selectedStock?: number;
+  quantity?: number;
+  customerName?: string;
+  customerPhone?: string;
+  deliveryAddress?: string;
+  checkoutSessionId?: string;
+  lastOrderId?: string;
+  lastPaymentReference?: string;
+  recentSummary?: string;
 };

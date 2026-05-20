@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orderItems, orders, products } from "@/lib/db/schema";
-import { createOrderSchema, updateOrderStatusSchema } from "@/lib/validators/order";
+import { createOrderSchema, updateDeliveryStatusSchema, updateOrderStatusSchema } from "@/lib/validators/order";
 
 export async function listOrders(businessId: string) {
   return db.query.orders.findMany({
@@ -41,8 +41,12 @@ export async function createOrder(businessId: string, input: unknown) {
       customerName: parsed.customerName,
       customerPhone: parsed.customerPhone,
       notes: parsed.notes || "",
+      deliveryAddress: parsed.deliveryAddress || null,
+      paymentReference: parsed.paymentReference || null,
+      paymentStatus: parsed.paymentReference ? "paid" : "pending",
+      deliveryStatus: "pending_coordination",
       totalUsd: total.toFixed(2),
-      status: "quote_requested",
+      status: parsed.paymentReference ? "confirmed" : "quote_requested",
     })
     .returning();
 
@@ -53,18 +57,31 @@ export async function createOrder(businessId: string, input: unknown) {
     unitPriceUsd: product.priceUsd,
   });
 
+  if (parsed.paymentReference) {
+    await db
+      .update(products)
+      .set({
+        stock: Math.max(0, product.stock - parsed.quantity),
+        updatedAt: sql`now()`,
+      })
+      .where(eq(products.id, product.id));
+  }
+
   return order;
 }
 
 export async function updateOrderStatus(input: unknown) {
   const parsed = updateOrderStatusSchema.parse(input);
+  const previous = await db.query.orders.findFirst({
+    where: eq(orders.id, parsed.orderId),
+  });
   const [order] = await db
     .update(orders)
     .set({ status: parsed.status, updatedAt: sql`now()` })
     .where(eq(orders.id, parsed.orderId))
     .returning();
 
-  if (parsed.status === "confirmed") {
+  if (parsed.status === "confirmed" && previous?.status !== "confirmed") {
     const items = await db.query.orderItems.findMany({
       where: eq(orderItems.orderId, parsed.orderId),
       with: { product: true },
@@ -81,5 +98,15 @@ export async function updateOrderStatus(input: unknown) {
     }
   }
 
+  return order;
+}
+
+export async function updateDeliveryStatus(input: unknown) {
+  const parsed = updateDeliveryStatusSchema.parse(input);
+  const [order] = await db
+    .update(orders)
+    .set({ deliveryStatus: parsed.deliveryStatus, updatedAt: sql`now()` })
+    .where(eq(orders.id, parsed.orderId))
+    .returning();
   return order;
 }

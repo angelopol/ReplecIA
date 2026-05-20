@@ -96,3 +96,18 @@ export async function updateStock(productId: string, nextStock: number) {
     .set({ stock: Math.max(0, nextStock), updatedAt: sql`now()` })
     .where(eq(products.id, productId));
 }
+
+export async function updateInventoryItem(productId: string, formData: FormData) {
+  const stock = Number(formData.get("stock") || 0);
+  const priceUsd = Number(formData.get("priceUsd") || 0);
+  const active = formData.get("active") === "on";
+  await db
+    .update(products)
+    .set({
+      stock: Math.max(0, Math.trunc(stock)),
+      priceUsd: Math.max(0, priceUsd).toFixed(2),
+      active,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(products.id, productId));
+}

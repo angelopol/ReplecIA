@@ -9,3 +9,4 @@ build/
 __pycache__
 *.db
 *.tsbuildinfo
+next-dev.*
