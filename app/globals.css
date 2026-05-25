@@ -316,6 +316,7 @@ textarea {
 }
 
 .purchase-panel {
+  min-width: 0;
   min-height: min(720px, calc(100vh - 68px));
   background: #fff;
   border: 1px solid var(--line);
@@ -330,6 +331,7 @@ textarea {
 .purchase-panel h3 {
   margin: 0;
   font-size: 1.35rem;
+  overflow-wrap: anywhere;
 }
 
 .purchase-panel p {
@@ -372,7 +374,10 @@ textarea {
 
 .purchase-line strong,
 .purchase-total strong {
-  overflow-wrap: break-word;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .purchase-total {
@@ -1123,10 +1128,13 @@ textarea {
 
   .chat-experience {
     grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .purchase-panel {
     min-height: auto;
+    width: 100%;
+    max-width: 100%;
   }
 
   .chat-head {
@@ -1221,10 +1229,48 @@ textarea {
 
   .landing-chat-wrap .purchase-panel {
     height: auto;
+    padding: 16px;
+  }
+
+  .purchase-panel h3 {
+    font-size: 1.25rem;
+  }
+
+  .purchase-line,
+  .purchase-total {
+    padding-top: 10px;
+  }
+
+  .purchase-total strong {
+    font-size: 1.4rem;
   }
 
   .landing-final-cta {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .landing-chat-section {
+    padding-inline: 12px;
+  }
+
+  .chat-experience {
+    gap: 12px;
+  }
+
+  .purchase-panel {
+    padding: 14px;
+  }
+
+  .purchase-panel h3 {
+    font-size: 1.18rem;
+  }
+
+  .purchase-line strong,
+  .purchase-total strong,
+  .purchase-panel p {
+    font-size: 0.94rem;
   }
 }
