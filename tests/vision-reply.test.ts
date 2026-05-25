@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enrichVisionReply, isIncompleteReply, visionUnavailableReply } from "@/lib/ai/provider";
+import { deterministicReply, enrichVisionReply, isIncompleteReply, visionUnavailableReply } from "@/lib/ai/provider";
 
 describe("vision replies", () => {
   it("accepts short part-identification replies", () => {
@@ -32,5 +32,22 @@ describe("vision replies", () => {
     expect(reply).toContain("No pude analizar visualmente");
     expect(reply).toContain("límite");
     expect(reply).toContain("polea");
+  });
+});
+
+describe("inventory replies", () => {
+  it("answers catalog questions with inventory instead of compatibility fallback", () => {
+    const reply = deterministicReply({
+      message: "cual es tu inventario para saber que pedirte",
+      vehicle: { make: "toyota", model: "corolla", year: 2021 },
+      matches: [],
+      missingFields: [],
+      inventoryOverview:
+        "Familias disponibles: frenos (2), electrico (3).\nEjemplos:\n- Alternador Toyota Corolla 2009-2013 (ALT-COR-09-13): $145.00, stock 4",
+    });
+
+    expect(reply).toContain("inventario activo");
+    expect(reply).toContain("Alternador Toyota Corolla");
+    expect(reply).not.toContain("no tengo una coincidencia compatible");
   });
 });

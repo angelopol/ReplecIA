@@ -53,6 +53,40 @@ textarea {
   margin-bottom: 28px;
 }
 
+.replecia-logo-image {
+  display: block;
+  width: 180px;
+  height: auto;
+  object-fit: contain;
+}
+
+.replecia-logo-image--mark {
+  width: 44px;
+  height: 44px;
+}
+
+.sidebar-brand {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 28px;
+  color: #fff;
+}
+
+.sidebar-brand .replecia-logo-image {
+  width: 168px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 8px;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.18));
+}
+
+.sidebar-brand span:last-child {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
 .nav {
   display: grid;
   gap: 8px;
@@ -267,6 +301,91 @@ textarea {
   display: grid;
   grid-template-rows: auto 1fr auto;
   overflow: hidden;
+}
+
+.chat-experience {
+  width: min(1160px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.chat-experience .chat-card {
+  width: 100%;
+}
+
+.purchase-panel {
+  min-height: min(720px, calc(100vh - 68px));
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 18px 48px rgba(20, 61, 143, 0.1);
+}
+
+.purchase-panel h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.purchase-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.purchase-panel--empty {
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 247, 251, 0.94)),
+    url("https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=900&q=80")
+      center / cover;
+}
+
+.purchase-panel--confirmed {
+  border-top: 5px solid var(--ok);
+}
+
+.purchase-items {
+  display: grid;
+  gap: 8px;
+}
+
+.purchase-line,
+.purchase-total {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.purchase-line span,
+.purchase-total span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.purchase-line strong,
+.purchase-total strong {
+  overflow-wrap: break-word;
+}
+
+.purchase-total {
+  margin-top: auto;
+  border: 1px solid #ffd0a6;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff8f1;
+}
+
+.purchase-total strong {
+  color: var(--orange);
+  font-size: 1.6rem;
 }
 
 .chat-head {
@@ -585,6 +704,396 @@ textarea {
   width: min(420px, 100%);
 }
 
+.login-logo {
+  margin-bottom: 14px;
+}
+
+.admin-login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1fr);
+  background: #fff;
+}
+
+.admin-login-brand {
+  color: #fff;
+  padding: clamp(28px, 5vw, 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  background:
+    linear-gradient(145deg, rgba(11, 37, 93, 0.96), rgba(20, 61, 143, 0.82)),
+    url("https://images.pexels.com/photos/8985968/pexels-photo-8985968.jpeg?auto=compress&cs=tinysrgb&w=1400&q=80")
+      center / cover;
+}
+
+.admin-login-brand__logo .replecia-logo-image,
+.landing-logo.replecia-logo-image {
+  width: 190px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 8px;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.22));
+}
+
+.admin-login-brand h1 {
+  margin: 0;
+  font-size: clamp(2.3rem, 5vw, 4.6rem);
+  line-height: 0.98;
+  max-width: 760px;
+}
+
+.admin-login-brand p:not(.eyebrow) {
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.6;
+  font-size: 1.06rem;
+  max-width: 620px;
+}
+
+.login-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.login-proof-grid span {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 900;
+  backdrop-filter: blur(8px);
+}
+
+.admin-login-panel {
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    linear-gradient(180deg, #f8fbff, #eef3fb);
+}
+
+.login-card {
+  width: min(470px, 100%);
+  display: grid;
+  gap: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 28px 80px rgba(20, 61, 143, 0.14);
+}
+
+.login-card h2 {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.login-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.login-card .btn {
+  width: 100%;
+  min-height: 48px;
+}
+
+.login-security-note {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.landing-page {
+  background: #fff;
+}
+
+.landing-hero {
+  min-height: 88vh;
+  color: #fff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px clamp(18px, 5vw, 72px) 30px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(11, 37, 93, 0.92) 0%, rgba(20, 61, 143, 0.72) 48%, rgba(24, 32, 47, 0.24) 100%),
+    url("https://images.pexels.com/photos/8986043/pexels-photo-8986043.jpeg?auto=compress&cs=tinysrgb&w=1800&q=80")
+      center / cover;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.landing-nav .replecia-logo-image {
+  width: 178px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 8px;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.22));
+}
+
+.landing-nav > div {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.landing-nav a {
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 800;
+}
+
+.landing-nav .btn.secondary {
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--blue);
+}
+
+.landing-hero__content {
+  width: min(760px, 100%);
+  position: relative;
+  z-index: 1;
+  padding: 12vh 0 8vh;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--orange);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+.landing-hero h1 {
+  margin: 0;
+  font-size: clamp(4rem, 10vw, 8.4rem);
+  line-height: 0.86;
+  font-weight: 950;
+}
+
+.landing-hero__content > p:not(.eyebrow) {
+  width: min(680px, 100%);
+  font-size: clamp(1.08rem, 2vw, 1.35rem);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 28px 0;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero-actions .btn.secondary {
+  background: #fff;
+  color: var(--blue);
+}
+
+.hero-proof {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: min(860px, 100%);
+}
+
+.hero-proof span {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-weight: 900;
+  backdrop-filter: blur(8px);
+}
+
+.landing-band,
+.platform-section,
+.diagnostic-image-section,
+.landing-chat-section,
+.landing-final-cta {
+  padding: 64px clamp(18px, 5vw, 72px);
+}
+
+.landing-band {
+  background: #fff;
+}
+
+.landing-section-head {
+  width: min(780px, 100%);
+  margin-bottom: 28px;
+}
+
+.landing-section-head h2,
+.platform-section h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.04;
+}
+
+.value-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.value-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+  background: #fff;
+  min-height: 160px;
+}
+
+.value-grid strong {
+  font-size: 1.05rem;
+}
+
+.value-grid p,
+.platform-section p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.platform-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(300px, 1fr);
+  align-items: center;
+  gap: 34px;
+  color: #fff;
+  min-height: 520px;
+  background:
+    linear-gradient(90deg, rgba(11, 37, 93, 0.96) 0%, rgba(20, 61, 143, 0.82) 48%, rgba(24, 32, 47, 0.4) 100%),
+    url("https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1800&q=80")
+      center / cover;
+}
+
+.platform-section h2 {
+  max-width: 720px;
+}
+
+.platform-section p {
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 620px;
+}
+
+.platform-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.platform-steps span {
+  display: block;
+  border-left: 5px solid var(--orange);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 18px;
+  font-weight: 900;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+}
+
+.diagnostic-image-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(320px, 1fr);
+  align-items: center;
+  gap: 34px;
+  background: #fff;
+}
+
+.diagnostic-image-section > div {
+  max-width: 690px;
+}
+
+.diagnostic-image-section h2,
+.landing-final-cta h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1.04;
+}
+
+.diagnostic-image-section p:not(.eyebrow),
+.landing-final-cta p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.diagnostic-image-section::after {
+  content: "";
+  display: block;
+  min-height: 380px;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 122, 26, 0.12), rgba(20, 61, 143, 0.2)),
+    url("https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1500&q=80")
+      center / cover;
+  box-shadow: 0 24px 70px rgba(20, 61, 143, 0.18);
+}
+
+.landing-chat-section {
+  background:
+    linear-gradient(90deg, rgba(238, 243, 251, 0.98) 0%, rgba(238, 243, 251, 0.92) 58%, rgba(238, 243, 251, 0.7) 100%),
+    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1800&q=80")
+      center / cover;
+}
+
+.landing-chat-wrap {
+  width: min(1180px, 100%);
+}
+
+.landing-chat-wrap .chat-card,
+.landing-chat-wrap .purchase-panel {
+  width: 100%;
+  height: min(740px, 86vh);
+  box-shadow: 0 26px 80px rgba(20, 61, 143, 0.18);
+}
+
+.landing-final-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  color: #fff;
+  background:
+    linear-gradient(90deg, rgba(11, 37, 93, 0.96), rgba(20, 61, 143, 0.78), rgba(255, 122, 26, 0.7)),
+    url("https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=1800&q=80")
+      center / cover;
+}
+
+.landing-final-cta > div {
+  max-width: 760px;
+}
+
+.landing-final-cta p {
+  color: rgba(255, 255, 255, 0.84);
+  max-width: 680px;
+}
+
+.final-logo.replecia-logo-image {
+  width: 190px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.24));
+}
+
 @media (max-width: 860px) {
   .app-shell,
   .chat-page {
@@ -612,6 +1121,14 @@ textarea {
     height: calc(100vh - 48px);
   }
 
+  .chat-experience {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-panel {
+    min-height: auto;
+  }
+
   .chat-head {
     align-items: flex-start;
   }
@@ -627,5 +1144,87 @@ textarea {
 
   .payment-fields {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-login-brand {
+    min-height: 46vh;
+    padding: 28px 18px;
+  }
+
+  .login-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-login-panel {
+    padding: 22px 18px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .landing-hero {
+    min-height: 92vh;
+    padding: 18px;
+  }
+
+  .landing-nav {
+    align-items: flex-start;
+  }
+
+  .landing-nav > div {
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .landing-nav > div a:not(.btn) {
+    display: none;
+  }
+
+  .landing-hero__content {
+    padding: 10vh 0 6vh;
+  }
+
+  .hero-proof,
+  .value-grid,
+  .platform-section,
+  .diagnostic-image-section {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-band,
+  .platform-section,
+  .diagnostic-image-section,
+  .landing-chat-section,
+  .landing-final-cta {
+    padding: 44px 18px;
+  }
+
+  .platform-section {
+    min-height: auto;
+    background-position: 58% center;
+  }
+
+  .diagnostic-image-section::after {
+    min-height: 300px;
+    order: -1;
+  }
+
+  .landing-chat-wrap .chat-card,
+  .landing-chat-wrap .purchase-panel {
+    height: 82vh;
+  }
+
+  .landing-chat-wrap .purchase-panel {
+    height: auto;
+  }
+
+  .landing-final-cta {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

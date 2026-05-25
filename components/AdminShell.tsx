@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { clearSessionCookie, getCurrentSession } from "@/lib/auth";
+import RepleciaLogo from "@/components/brand/RepleciaLogo";
 
 async function logoutAction() {
   "use server";
@@ -14,7 +15,10 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">ReplecIA</div>
+        <Link href="/admin" className="sidebar-brand">
+          <RepleciaLogo />
+          <span>Panel comercial</span>
+        </Link>
         <nav className="nav">
           <Link href="/admin">Dashboard</Link>
           <Link href="/admin/inventory">Inventario</Link>

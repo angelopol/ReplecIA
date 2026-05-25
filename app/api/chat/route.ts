@@ -5,6 +5,7 @@ import { getDefaultBusiness } from "@/lib/db/defaults";
 import { appendConversationMessage, getConversationMemory, updateConversationMemory } from "@/lib/services/conversations";
 import { listAvailableProducts } from "@/lib/services/inventory";
 import { missingVehicleFields, scoreProducts } from "@/lib/services/matching";
+import type { InventoryProduct } from "@/lib/services/matching";
 import { buildSalesPush, handleCommercialTurn } from "@/lib/services/sales";
 import type { VehicleInfo } from "@/lib/db/schema";
 
@@ -19,13 +20,22 @@ const chatSchema = z.object({
     .optional(),
   memory: z
     .object({
+      stage: z.enum(["idle", "contact", "delivery", "payment", "completed"]).optional(),
       recentSummary: z.string().optional(),
       checkoutStage: z.string().optional(),
+      selectedProductId: z.string().optional(),
+      selectedProductName: z.string().optional(),
+      selectedSku: z.string().optional(),
+      selectedPriceUsd: z.string().optional(),
+      selectedStock: z.number().optional(),
+      quantity: z.number().optional(),
       selectedProduct: z.unknown().optional(),
       lastOrderId: z.string().optional(),
       lastPaymentReference: z.string().optional(),
+      customerName: z.string().optional(),
       customerPhone: z.string().optional(),
       deliveryAddress: z.string().optional(),
+      checkoutSessionId: z.string().optional(),
     })
     .optional(),
   vehicle: z
@@ -76,6 +86,48 @@ function extractVehicle(message: string, current: VehicleInfo): VehicleInfo {
   return next;
 }
 
+function buildInventoryOverview(products: InventoryProduct[]) {
+  const active = products.filter((product) => product.stock > 0);
+  const families = new Map<string, number>();
+  const examples = active.slice(0, 10).map((product) => {
+    const vehicles = (product.compatibility || [])
+      .slice(0, 2)
+      .map((item) => `${item.make} ${item.model}${item.yearFrom || item.yearTo ? ` ${item.yearFrom || ""}-${item.yearTo || ""}` : ""}`)
+      .join(", ");
+    const family = inferInventoryFamily(product.name, product.description);
+    families.set(family, (families.get(family) || 0) + 1);
+    return `- ${product.name} (${product.sku}): $${product.priceUsd}, stock ${product.stock}${vehicles ? `, compatible con ${vehicles}` : ""}`;
+  });
+
+  for (const product of active.slice(10)) {
+    const family = inferInventoryFamily(product.name, product.description);
+    families.set(family, (families.get(family) || 0) + 1);
+  }
+
+  const familySummary = [...families.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([family, count]) => `${family} (${count})`)
+    .join(", ");
+
+  return [`Familias disponibles: ${familySummary || "sin productos activos"}.`, `Ejemplos:`, ...examples].join("\n");
+}
+
+function inferInventoryFamily(name: string, description: string) {
+  const text = `${name} ${description}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+  if (/freno|pastilla|disco/.test(text)) return "frenos";
+  if (/alternador|arranque|bateria|electr/.test(text)) return "eléctrico";
+  if (/radiador|termostato|agua|enfriamiento/.test(text)) return "enfriamiento";
+  if (/filtro|aceite/.test(text)) return "filtros";
+  if (/amortiguador|suspension|base/.test(text)) return "suspensión";
+  if (/bujia|bobina|inyector|motor/.test(text)) return "motor";
+  if (/sensor|oxigeno|cigue/.test(text)) return "sensores";
+  return "otros";
+}
+
 export async function POST(request: Request) {
   try {
     const json = await request.json();
@@ -84,6 +136,7 @@ export async function POST(request: Request) {
 
     const vehicle = extractVehicle(parsed.message, parsed.vehicle);
     const inventory = await listAvailableProducts(business.id);
+    const inventoryOverview = buildInventoryOverview(inventory);
     const shouldMatchInventoryFromText = !parsed.image || /\b(compr|precio|tienen|disponible|necesito|busco|quiero)\b/i.test(parsed.message);
     const matches = shouldMatchInventoryFromText && !parsed.image ? scoreProducts(parsed.message, vehicle, inventory) : [];
     const missingFields = missingVehicleFields(vehicle);
@@ -102,7 +155,8 @@ export async function POST(request: Request) {
       message: parsed.message,
       memory: {
         ...persistedMemory,
-        recentSummary: parsed.memory?.recentSummary,
+        ...parsed.memory,
+        recentSummary: parsed.memory?.recentSummary || persistedMemory.recentSummary,
       },
       matches,
     });
@@ -140,6 +194,7 @@ export async function POST(request: Request) {
       missingFields,
       image: parsed.image,
       memory: parsed.memory,
+      inventoryOverview,
     });
     const canPushSale = !parsed.image && (matches[0]?.confidence ?? 0) >= 0.55 && matches[0]?.product.stock > 0;
     const finalReply = `${reply}${canPushSale ? buildSalesPush(commercial.memory) : ""}`;

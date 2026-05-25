@@ -21,6 +21,7 @@ export type ChatReplyInput = {
     customerPhone?: string;
     deliveryAddress?: string;
   };
+  inventoryOverview?: string;
 };
 
 export type AiProvider = {
@@ -53,19 +54,24 @@ class GeminiProvider implements AiProvider {
       razones: match.reasons,
     }));
     const text =
-      "Eres ReplecIA, asesor IA para una tienda de autopartes. Responde en español, breve, profesional y útil. " +
-      "No inventes disponibilidad ni compatibilidad. Si faltan datos del vehículo, pídelos. " +
-      "Si el usuario adjunta una imagen de un vehículo, primero intenta inferir marca, modelo o generación aproximada a partir de rasgos visibles. " +
-      "Si adjunta una imagen de una pieza, intenta identificar el tipo de pieza visible (por ejemplo alternador, radiador, compresor, filtro, pastilla, amortiguador) y explica qué datos necesita para vender la correcta. " +
-      "Formula siempre la inferencia como hipótesis: 'Por la imagen parece...' o 'Podría ser...'. " +
-      "Luego pide confirmación de vehículo o código/medida de pieza. No digas simplemente que no puedes verlo si hay rasgos visuales útiles. " +
-      "Usa la imagen solo como apoyo, no como certeza absoluta. " +
-      "Si hay coincidencias, recomienda máximo 2 repuestos y explica que la tienda debe confirmar antes de cerrar la venta.\n\n" +
+      "Eres ReplecIA, un vendedor tecnico IA para una tienda de autopartes. Tu objetivo es asesorar y cerrar ventas sin inventar datos.\n" +
+      "Reglas de respuesta:\n" +
+      "1. Responde en espanol natural, claro y comercial. Usa una sola respuesta unificada por turno.\n" +
+      "2. Detecta primero la intencion del usuario: saludo, ayuda, consulta de inventario, diagnostico, compatibilidad, compra, pago, entrega o estado de pedido.\n" +
+      "3. Si pregunta por inventario, catalogo, stock o 'que tienes', resume el inventario disponible por familias y da ejemplos concretos con precio/stock si estan en el contexto. No repitas una negativa de compatibilidad.\n" +
+      "4. No recomiendes piezas que no esten en Coincidencias o Inventario disponible. No mezcles un vehiculo con una pieza incompatible.\n" +
+      "5. Si faltan datos del vehiculo, pide solo los datos minimos necesarios y evita pedir todo otra vez si ya esta en memoria.\n" +
+      "6. Si hay coincidencias con stock, recomienda maximo 2 repuestos, confirma disponibilidad y propone el siguiente paso de compra.\n" +
+      "7. Si no hay coincidencia compatible, dilo con honestidad, ofrece una alternativa solo si existe en el contexto y pide codigo/foto cercana/medida para revision manual.\n" +
+      "8. Si adjunta una imagen de vehiculo, intenta inferir marca/modelo/generacion como hipotesis: 'Por la imagen parece...'. Luego pide confirmacion antes de vender.\n" +
+      "9. Si adjunta una imagen de pieza, identifica el tipo visible si es razonable (alternador, radiador, compresor, filtro, pastilla, amortiguador, sensor, bomba, arranque) y pide vehiculo/codigo/medida.\n" +
+      "10. Nunca digas que una pieza es compatible solo por una foto. La foto orienta; la compatibilidad la confirma inventario + vehiculo/codigo.\n\n" +
       `Mensaje: ${input.message}\n` +
       `Vehículo: ${JSON.stringify(input.vehicle)}\n` +
       `Memoria reciente: ${input.memory?.recentSummary || "sin historial"}\n` +
       `Estado comercial: ${JSON.stringify(input.memory || {})}\n` +
       `Datos faltantes: ${input.missingFields.join(", ") || "ninguno"}\n` +
+      `Inventario disponible: ${input.inventoryOverview || "no incluido"}\n` +
       `Coincidencias: ${JSON.stringify(topMatches)}`;
     const parts = input.image
       ? [
@@ -126,6 +132,10 @@ export function deterministicReply(input: ChatReplyInput) {
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
 
+  if (isInventoryQuestion(normalized)) {
+    return buildInventoryOverviewReply(input.inventoryOverview);
+  }
+
   if (input.image) {
     const missing = input.missingFields.length ? input.missingFields : missingVehicleFields(input.vehicle);
     if (missing.length > 0) {
@@ -139,7 +149,7 @@ export function deterministicReply(input: ChatReplyInput) {
   }
 
   if (/ayuda|ayudar|que puedes hacer|como funciona/.test(normalized)) {
-    return "Puedo orientarte con diagnóstico básico, revisar compatibilidad por marca, modelo y año, verificar stock disponible y dejar una solicitud de pedido para que la tienda la confirme.";
+    return "Puedo orientarte con diagnóstico básico, revisar compatibilidad por marca, modelo y año, verificar stock disponible y llevarte hasta el pago cuando encontremos la pieza correcta.";
   }
 
   const missing = input.missingFields.length ? input.missingFields : missingVehicleFields(input.vehicle);
@@ -161,7 +171,21 @@ export function deterministicReply(input: ChatReplyInput) {
 
   const second = input.matches[1];
   const extra = second ? ` También podría revisar ${second.product.name}.` : "";
-  return `La opción más probable es ${best.product.name} (${best.product.sku}), con stock disponible y precio referencial de $${best.product.priceUsd}.${extra} Recomiendo confirmar compatibilidad antes de cerrar la venta.`;
+  return `La opción más probable es ${best.product.name} (${best.product.sku}), con stock disponible y precio referencial de $${best.product.priceUsd}.${extra} Si quieres avanzar, puedo llevarte al pago y dejar el pedido listo para coordinación.`;
+}
+
+export function isInventoryQuestion(normalizedMessage: string) {
+  return /\b(inventario|catalogo|catálogo|stock|disponibles|que tienes|que venden|productos|repuestos disponibles|lista de repuestos)\b/.test(
+    normalizedMessage,
+  );
+}
+
+function buildInventoryOverviewReply(inventoryOverview?: string) {
+  if (!inventoryOverview) {
+    return "Puedo revisar el inventario activo de la tienda por familias como frenos, eléctrico, enfriamiento, filtros, suspensión, motor y sensores. Dime tu vehículo y la pieza que buscas para validar compatibilidad antes de venderte algo.";
+  }
+
+  return `Este es el inventario activo que puedo consultar ahora:\n\n${inventoryOverview}\n\nSi me dices marca, modelo, año y pieza que buscas, valido compatibilidad y stock antes de llevarte al pago.`;
 }
 
 export function isIncompleteReply(reply: string, isVision = false) {

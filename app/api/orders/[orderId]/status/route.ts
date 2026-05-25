@@ -21,12 +21,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ord
       id: order.id,
       status: order.status,
       paymentStatus: order.paymentStatus,
+      paymentReference: order.paymentReference,
       deliveryStatus: order.deliveryStatus,
       deliveryAddress: order.deliveryAddress,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
       totalUsd: order.totalUsd,
       items: order.items.map((item) => ({
         quantity: item.quantity,
         productName: item.product.name,
+        unitPriceUsd: item.unitPriceUsd,
       })),
     },
   });

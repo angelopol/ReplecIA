@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { checkoutSessions, products, type SalesMemory } from "@/lib/db/schema";
+import { checkoutSessions, orders, products, type SalesMemory } from "@/lib/db/schema";
 import type { ProductMatch } from "@/lib/services/matching";
 
 export type CommercialReply = {
@@ -20,8 +20,27 @@ export function isPurchaseIntent(message: string) {
   return /compr|pagar|quiero|confirm|reserv|me lo llevo|lo quiero|cerrar|asegurar/i.test(message);
 }
 
+export function isGenericPurchaseIntent(message: string) {
+  const normalized = message
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(
+      /\b(comprar|compra|pagar|pago|quiero|confirmar|confirmo|reservar|reserva|me|lo|la|llevo|cerrar|asegurar|ese|esa|este|esta|pieza|producto|unidad|unidades|por|favor)\b/g,
+      " ",
+    )
+    .replace(/\b\d{1,2}\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return isPurchaseIntent(message) && normalized.length === 0;
+}
+
 export function isStatusIntent(message: string) {
-  return /pedido|orden|compra|entrega|delivery|pago|estado|como va|seguimiento/i.test(message);
+  return /pedido|orden|compra|compre|compré|entrega|delivery|pago|pague|pagué|estado|como va|seguimiento|recibo|detalle|datos|que fue|producto/i.test(
+    message,
+  );
 }
 
 export function isCancelIntent(message: string) {
@@ -30,6 +49,12 @@ export function isCancelIntent(message: string) {
 
 export function isVisualIdentificationIntent(message: string) {
   return /imagen|foto|ves|ver|reconoc|marca|modelo|que carro|que auto|no se cual/i.test(message);
+}
+
+export function isNewPurchaseAfterCompletedIntent(message: string) {
+  return /otra compra|otro repuesto|otra pieza|nuevo pedido|nueva compra|comprar otra|comprar otro|buscar otra|buscar otro/i.test(
+    message,
+  );
 }
 
 export function parseQuantity(message: string) {
@@ -55,8 +80,10 @@ export async function handleCommercialTurn(input: {
 }): Promise<CommercialReply> {
   const { businessId, conversationId, message, matches } = input;
   let memory: SalesMemory = { stage: "idle", quantity: 1, ...input.memory };
+  const purchaseIntent = isPurchaseIntent(message);
+  const genericPurchaseIntent = isGenericPurchaseIntent(message);
 
-  if (isVisualIdentificationIntent(message) && !isPurchaseIntent(message)) {
+  if (isVisualIdentificationIntent(message) && !purchaseIntent) {
     return { handled: false, memory: { ...memory, stage: memory.stage || "idle" } };
   }
 
@@ -69,11 +96,21 @@ export async function handleCommercialTurn(input: {
     };
   }
 
-  if (isStatusIntent(message) && memory.lastOrderId) {
+  if (isStatusIntent(message) && memory.lastOrderId && !(memory.stage === "completed" && isNewPurchaseAfterCompletedIntent(message))) {
+    const orderSummary = await buildOrderStatusReply(memory);
     return {
       handled: true,
       memory,
-      reply: `Tu pedido #${memory.lastOrderId.slice(0, 8)} está confirmado y en coordinación de entrega. Pago aprobado con referencia ${memory.lastPaymentReference || "registrada"}. La tienda te contactará por ${memory.customerPhone || "el teléfono indicado"}.`,
+      reply: orderSummary,
+    };
+  }
+
+  if (memory.stage === "completed" && memory.lastOrderId && !isNewPurchaseAfterCompletedIntent(message)) {
+    const orderSummary = await buildOrderStatusReply(memory);
+    return {
+      handled: true,
+      memory,
+      reply: `${orderSummary}\n\nSi quieres iniciar otra compra, dime "comprar otro repuesto" y buscamos una nueva pieza.`,
     };
   }
 
@@ -131,7 +168,7 @@ export async function handleCommercialTurn(input: {
   }
 
   const best = matches[0];
-  if (best) {
+  if (best && (!purchaseIntent || !genericPurchaseIntent || !memory.selectedProductId)) {
     memory = {
       ...memory,
       stage: memory.stage ?? "idle",
@@ -144,7 +181,25 @@ export async function handleCommercialTurn(input: {
     };
   }
 
-  if (isPurchaseIntent(message) && best) {
+  if (purchaseIntent && genericPurchaseIntent && memory.selectedProductId && memory.selectedProductName) {
+    const quantity = parseQuantity(message);
+    memory = { ...memory, quantity };
+    if ((memory.selectedStock || 0) < quantity) {
+      return {
+        handled: true,
+        memory,
+        reply: `Tengo disponibilidad limitada de ${memory.selectedProductName}: quedan ${memory.selectedStock || 0}. Puedo ajustar la cantidad o buscar una alternativa compatible.`,
+      };
+    }
+    memory = { ...memory, stage: "contact" };
+    return {
+      handled: true,
+      memory,
+      reply: `Perfecto, avanzamos con ${memory.selectedProductName} (${memory.selectedSku}). Confirmo ${memory.selectedStock} disponible(s), precio $${memory.selectedPriceUsd}. Para cerrar la venta, envíame tu nombre y teléfono.`,
+    };
+  }
+
+  if (purchaseIntent && best) {
     if (best.product.stock < (memory.quantity || 1)) {
       return {
         handled: true,
@@ -230,4 +285,53 @@ export async function getCheckoutSummary(checkoutSessionId: string) {
     productName: checkout.product.name,
     quantity: checkout.quantity,
   };
+}
+
+async function buildOrderStatusReply(memory: SalesMemory) {
+  if (!memory.lastOrderId) {
+    return "Todavía no tengo un pedido confirmado en esta conversación.";
+  }
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, memory.lastOrderId),
+    with: {
+      items: {
+        with: { product: true },
+      },
+    },
+  });
+
+  if (!order) {
+    return `Tengo registrado el pedido #${memory.lastOrderId.slice(0, 8)}, pero no pude cargar el detalle en este momento. Referencia de pago: ${memory.lastPaymentReference || "registrada"}.`;
+  }
+
+  const items = order.items
+    .map((item) => `${item.quantity} x ${item.product.name}`)
+    .join(", ");
+  const deliveryLabel = formatDeliveryStatus(order.deliveryStatus);
+
+  return `Tu pedido #${order.id.slice(0, 8)} está ${formatOrderStatus(order.status)}. Compraste: ${items}. Total: $${order.totalUsd}. Pago: ${order.paymentStatus === "paid" ? `aprobado (${order.paymentReference || memory.lastPaymentReference || "referencia registrada"})` : order.paymentStatus}. Entrega: ${deliveryLabel}${order.deliveryAddress ? `, ${order.deliveryAddress}` : ""}. La tienda te contactará por ${order.customerPhone || memory.customerPhone || "el teléfono indicado"}.`;
+}
+
+function formatOrderStatus(status: string) {
+  const labels: Record<string, string> = {
+    draft: "en borrador",
+    quote_requested: "pendiente de cotización",
+    pending: "pendiente",
+    confirmed: "confirmado",
+    ready: "listo",
+    delivered: "entregado",
+    cancelled: "cancelado",
+  };
+  return labels[status] || status;
+}
+
+function formatDeliveryStatus(status: string) {
+  const labels: Record<string, string> = {
+    pending_coordination: "pendiente de coordinación",
+    coordinated: "coordinada",
+    on_the_way: "en camino",
+    delivered: "entregada",
+  };
+  return labels[status] || status;
 }

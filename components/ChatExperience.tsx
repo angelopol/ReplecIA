@@ -19,6 +19,7 @@ type CommercialState = {
   lastOrderId?: string;
   lastPaymentReference?: string;
   customerPhone?: string;
+  customerName?: string;
   deliveryAddress?: string;
 };
 
@@ -28,6 +29,23 @@ type CheckoutView = {
   amountUsd: string;
   productName: string;
   quantity: number;
+};
+
+type OrderSummary = {
+  id: string;
+  status: string;
+  paymentStatus: string;
+  paymentReference?: string;
+  deliveryStatus: string;
+  deliveryAddress?: string | null;
+  customerName?: string;
+  customerPhone?: string;
+  totalUsd: string;
+  items: {
+    quantity: number;
+    productName: string;
+    unitPriceUsd?: string;
+  }[];
 };
 
 const STORAGE_KEY = "replecia_chat_history_v4";
@@ -41,6 +59,7 @@ export default function ChatExperience() {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", content: INITIAL_MESSAGE }]);
   const [commercialState, setCommercialState] = useState<CommercialState>({ stage: "idle" });
   const [checkout, setCheckout] = useState<CheckoutView | null>(null);
+  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -59,12 +78,14 @@ export default function ChatExperience() {
         messages?: ChatMessage[];
         commercialState?: CommercialState;
         checkout?: CheckoutView | null;
+        orderSummary?: OrderSummary | null;
       };
       if (parsed.conversationId) setConversationId(parsed.conversationId);
       if (parsed.vehicle) setVehicle(parsed.vehicle);
       if (Array.isArray(parsed.messages) && parsed.messages.length > 0) setMessages(parsed.messages);
       if (parsed.commercialState) setCommercialState(parsed.commercialState);
       if (parsed.checkout) setCheckout(parsed.checkout);
+      if (parsed.orderSummary) setOrderSummary(parsed.orderSummary);
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
     }
@@ -73,10 +94,24 @@ export default function ChatExperience() {
   useEffect(() => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ conversationId, vehicle, messages, commercialState, checkout }),
+      JSON.stringify({ conversationId, vehicle, messages, commercialState, checkout, orderSummary }),
     );
     messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight, behavior: "smooth" });
-  }, [conversationId, vehicle, messages, commercialState, checkout]);
+  }, [conversationId, vehicle, messages, commercialState, checkout, orderSummary]);
+
+  useEffect(() => {
+    if (!commercialState.lastOrderId || orderSummary?.id === commercialState.lastOrderId) return;
+    let cancelled = false;
+    fetch(`/api/orders/${commercialState.lastOrderId}/status`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.order) setOrderSummary(data.order);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [commercialState.lastOrderId, orderSummary?.id]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,6 +191,23 @@ export default function ChatExperience() {
         lastPaymentReference: data.receipt.reference,
         checkoutSessionId: checkout.id,
       };
+      setOrderSummary({
+        id: data.receipt.orderId,
+        status: data.order.status,
+        paymentStatus: data.order.paymentStatus,
+        paymentReference: data.receipt.reference,
+        deliveryStatus: data.order.deliveryStatus,
+        deliveryAddress: data.order.deliveryAddress,
+        customerName: data.order.customerName,
+        customerPhone: data.order.customerPhone,
+        totalUsd: data.order.totalUsd,
+        items: [
+          {
+            quantity: checkout.quantity,
+            productName: checkout.productName,
+          },
+        ],
+      });
       setCommercialState(nextState);
       setCheckout(null);
       setCard({ number: "", name: "", expiry: "", cvc: "" });
@@ -196,6 +248,7 @@ export default function ChatExperience() {
     setMessages([{ role: "assistant", content: INITIAL_MESSAGE }]);
     setCommercialState({ stage: "idle" });
     setCheckout(null);
+    setOrderSummary(null);
     setCard({ number: "", name: "", expiry: "", cvc: "" });
     setImage(null);
     setText("");
@@ -204,6 +257,7 @@ export default function ChatExperience() {
   }
 
   return (
+    <div className="chat-experience">
     <div className="chat-card">
       <div className="chat-head">
         <div>
@@ -283,6 +337,8 @@ export default function ChatExperience() {
         </button>
       </form>
     </div>
+    <PurchasePanel order={orderSummary} checkout={checkout} />
+    </div>
   );
 }
 
@@ -341,4 +397,92 @@ function TypingIndicator() {
       <span />
     </div>
   );
+}
+
+function PurchasePanel({ order, checkout }: { order: OrderSummary | null; checkout: CheckoutView | null }) {
+  if (!order && !checkout) {
+    return (
+      <aside className="purchase-panel purchase-panel--empty">
+        <div>
+          <span className="badge">Compra</span>
+          <h3>Tu compra aparecerá aquí</h3>
+          <p>Cuando el asistente reserve una pieza o confirmes el pago, verás el resumen, entrega y referencia fuera del chat.</p>
+        </div>
+      </aside>
+    );
+  }
+
+  if (checkout && !order) {
+    return (
+      <aside className="purchase-panel">
+        <span className="badge warn">Pago pendiente</span>
+        <h3>Resumen de compra</h3>
+        <div className="purchase-line">
+          <span>Producto</span>
+          <strong>{checkout.productName}</strong>
+        </div>
+        <div className="purchase-line">
+          <span>Cantidad</span>
+          <strong>{checkout.quantity}</strong>
+        </div>
+        <div className="purchase-total">
+          <span>Total</span>
+          <strong>${checkout.amountUsd}</strong>
+        </div>
+        <p>Completa el pago seguro en el chat para confirmar el pedido y pasar a coordinación de entrega.</p>
+      </aside>
+    );
+  }
+
+  if (!order) return null;
+
+  return (
+    <aside className="purchase-panel purchase-panel--confirmed">
+      <span className="badge ok">Pedido confirmado</span>
+      <h3>Pedido #{order.id.slice(0, 8)}</h3>
+      <div className="purchase-items">
+        {order.items.map((item, index) => (
+          <div className="purchase-line" key={`${item.productName}-${index}`}>
+            <span>{item.quantity} x</span>
+            <strong>{item.productName}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="purchase-total">
+        <span>Total pagado</span>
+        <strong>${order.totalUsd}</strong>
+      </div>
+      <div className="purchase-line">
+        <span>Pago</span>
+        <strong>{order.paymentReference || order.paymentStatus}</strong>
+      </div>
+      <div className="purchase-line">
+        <span>Entrega</span>
+        <strong>{formatDeliveryLabel(order.deliveryStatus)}</strong>
+      </div>
+      {order.deliveryAddress ? (
+        <div className="purchase-line">
+          <span>Dirección</span>
+          <strong>{order.deliveryAddress}</strong>
+        </div>
+      ) : null}
+      {order.customerPhone ? (
+        <div className="purchase-line">
+          <span>Contacto</span>
+          <strong>{order.customerPhone}</strong>
+        </div>
+      ) : null}
+      <p>La tienda usará estos datos para coordinar la entrega. Puedes preguntar por el estado del pedido en cualquier momento.</p>
+    </aside>
+  );
+}
+
+function formatDeliveryLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending_coordination: "Pendiente de coordinación",
+    coordinated: "Coordinada",
+    on_the_way: "En camino",
+    delivered: "Entregada",
+  };
+  return labels[status] || status;
 }
